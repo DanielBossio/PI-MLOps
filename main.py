@@ -34,13 +34,13 @@ def root():
 
 @app.get("/index")
 def index():
-    return """Los métodos de búsqueda disponibles son:\n
-    1. Informción de un desarrollador\n
-    2. Información de un usuario\n
-    3. Año con más horas jugadas para un género\n
-    4. Usuario con más horas jugadas para un género\n
-    5. Top 3 de juegos recomendados para un año\n
-    6. Top 3 de desarrolladores con más juegos recomendados para un año\n
+    return """Los métodos de búsqueda disponibles son:<br>
+    1. Información de un desarrollador<br>
+    2. Información de un usuario<br>
+    3. Año con más horas jugadas para un género<br>
+    4. Usuario con más horas jugadas para un género<br>
+    5. Top 3 de juegos recomendados para un año<br>
+    6. Top 3 de desarrolladores con más juegos recomendados para un año<br>
     7. Cantidad de reseñas para un desarrollador
     """
 
