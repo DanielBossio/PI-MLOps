@@ -1,1 +1,0 @@
-El archivo items.csv fue dividido en 6 partes para poder exportar a Github
