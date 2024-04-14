@@ -12,9 +12,12 @@ juegos, items, reviews = None, None, None
 @app.on_event("startup")
 async def startup_event():
     global juegos, items, reviews
-    juegos = pd.read_csv('datasets/games.csv')
-    items = pd.read_csv('datasets/items.csv')
-    reviews = pd.read_csv('datasets/reviews.csv')
+    juegos = pd.read_csv('games.csv')
+    reviews = pd.read_csv('reviews.csv')
+    items_arr = []
+    for i in range(6):
+        items_arr.append(pd.read_csv(f'items{i}.csv')
+    items = pd.concat(items_arr)
 
     patron = re.compile(r'\d+.*\d*')
 
