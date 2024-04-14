@@ -16,7 +16,7 @@ async def startup_event():
     reviews = pd.read_csv('reviews.csv')
     items_arr = []
     for i in range(6):
-        items_arr.append(pd.read_csv(f'items{i}.csv')
+        items_arr.append(pd.read_csv(f'items{i}.csv'))
     items = pd.concat(items_arr)
 
     patron = re.compile(r'\d+.*\d*')
