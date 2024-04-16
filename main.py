@@ -12,9 +12,9 @@ app = FastAPI()
 juegos, items, reviews, similarity_users, similarity_games, users_vs_games = None, None, None, None, None, None
 
 #Matriz de similaridad de juegos
-def init_similarity_games():
+async def init_similarity_games():
     global similarity_games
-    juegos_data = juegos["item_id","price","free","año","genres"]
+    juegos_data = juegos["item_id","price","free","year","genres"]
     generos = pd.read_csv('genres.csv')
     
     #Codificar la columna géneros, indicando con 1 o 0 si el juego  contiene o no la categoría
@@ -28,12 +28,12 @@ def init_similarity_games():
     #Poner como índice el item_id
     juegos_data.set_index("item_id",inplace=True)
 
-    #Imputar faltantes en la columna año y cambiar a entero
-    juegos_data.año.fillna(juegos_data.año.median(),inplace=True)
-    juegos_data.año = juegos_data.año.astype(int)
+    #Imputar faltantes en la columna year y cambiar a entero
+    juegos_data.year.fillna(juegos_data.year.median(),inplace=True)
+    juegos_data.year = juegos_data.year.astype(int)
 
-    #Escalar los datos(columna año)
-    juegos_data.año = minmax_scale(juegos_data.año)
+    #Escalar los datos(columna year)
+    juegos_data.year = minmax_scale(juegos_data.year)
     #Sparsity de los datos: 0.18
 
     #Matriz de similaridad
@@ -41,11 +41,11 @@ def init_similarity_games():
     similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
 
 #Matriz de similaridad de usuarios
-def init_similarity_users():
+asyn def init_similarity_users():
     global similarity_users, users_vs_games
     #Inicializar la matriz de similaridad de juegos si no se ha hecho aún
     if similarity_games is None:
-        init_similarity_games()
+        await init_similarity_games()
 
     #El puntaje a operar es el promedio entre el análisis de sentimientos y si se recomienda o no (entre 0 y 1.5)
     reviews_data = reviews["item_id","user_id","recommend","sentiment_analysis"]
@@ -76,7 +76,7 @@ def init_similarity_users():
 
 #Inicializar los modelos al empezar
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     global juegos, items, reviews
     juegos = pd.read_csv('games.csv')
     reviews = pd.read_csv('reviews.csv')
@@ -88,14 +88,14 @@ def startup_event():
     patron = re.compile(r'\d+.*\d*')
 
     juegos.release_date = pd.to_datetime(juegos.release_date)
-    juegos['año'] = juegos.release_date.dt.year
+    juegos['year'] = juegos.release_date.dt.year
     juegos["free"] = juegos.price.apply(lambda x: "free to play".find(x.lower().strip()) >= 0)
     juegos["price"] = juegos.price.apply(lambda x: float(x) if patron.fullmatch(x) else 0)
     juegos["price"] = juegos.price.astype(float, errors='ignore')
 
     #Crear matrices de similaridad de los juegos y de los usuarios
-    init_similarity_games()
-    init_similarity_users()
+    await init_similarity_games()
+    await init_similarity_users()
 
 #Método de la página raíz
 @app.get("/")
@@ -107,31 +107,31 @@ def index():
     return """Los métodos de búsqueda disponibles son: 
     1. Información de un desarrollador; 
     2. Información de un usuario; 
-    3. Año con más horas jugadas para un género; 
+    3. year con más horas jugadas para un género; 
     4. Usuario con más horas jugadas para un género; 
-    5. Top 3 de juegos recomendados para un año; 
-    6. Top 3 de desarrolladores con más juegos recomendados para un año; 
+    5. Top 3 de juegos recomendados para un year; 
+    6. Top 3 de desarrolladores con más juegos recomendados para un year; 
     7. Cantidad de reseñas para un desarrollador
     """
 
 """
-  Cantidad de items y porcentaje de contenido Free por año según empresa desarrolladora
+  Cantidad de items y porcentaje de contenido Free por year según empresa desarrolladora
 """
 @app.get("/developer/{developer}")
 def developer(developer: str):
     #Obtener la información de los juegos
-    df = juegos[juegos["developer"] == developer][["año", "app_name", "free"]]
+    df = juegos[juegos["developer"] == developer][["year", "app_name", "free"]]
     
-    #Agrupar por año y contar la cantidad de items y
-    conteo = df.groupby("año")["app_name"].count().reset_index().sort_values(by="año")
-    conteo.año = conteo.año.astype(int)
+    #Agrupar por year y contar la cantidad de items y
+    conteo = df.groupby("year")["app_name"].count().reset_index().sort_values(by="year")
+    conteo.year = conteo.year.astype(int)
     
-    #Agrupar por año y contar el porcentaje de Free to Play
-    free = df.groupby("año")["free"].sum().reset_index().sort_values(by="año")
-    free.año = free.año.astype(int)
+    #Agrupar por year y contar el porcentaje de Free to Play
+    free = df.groupby("year")["free"].sum().reset_index().sort_values(by="year")
+    free.year = free.year.astype(int)
     
     #Unir los dos dataframes
-    conteo = pd.merge(conteo, free, on="año")
+    conteo = pd.merge(conteo, free, on="year")
     conteo.free = round(conteo.free/conteo.app_name*100,2)
     return conteo.to_dict()
 
@@ -159,7 +159,7 @@ def userdata(user: str):
     }
 
 """
-  Devolver el  año con más horas jugadas para un género dado.
+  Devolver el  year con más horas jugadas para un género dado.
   Input: genero, string
 """
 @app.get("/play_time_genre/{genero}")
@@ -167,20 +167,20 @@ def play_time_genre(genero: str):
     #Obtener la información de los juegos y los items (que contiene las horas jugadas por juego y por usuario)
     df = pd.merge(juegos, items, on='item_id')
     
-    # - Filtrar por el género dado y seleccionar las columnas año y playtime_forever (horas totales jugadas)
-    # - Agrupar por año y sumar las horas jugadas por año
-    # - Ordenar por horas jugadas de mayor a menor y seleccionar el primer elemento (año con más horas jugadas)
-    df = df[df.genres.str.contains(genero)][["año", "playtime_forever"]]\
-    .groupby("año").sum()\
+    # - Filtrar por el género dado y seleccionar las columnas year y playtime_forever (horas totales jugadas)
+    # - Agrupar por year y sumar las horas jugadas por year
+    # - Ordenar por horas jugadas de mayor a menor y seleccionar el primer elemento (year con más horas jugadas)
+    df = df[df.genres.str.contains(genero)][["year", "playtime_forever"]]\
+    .groupby("year").sum()\
     .sort_values(by="playtime_forever", ascending=False)\
     .reset_index()
-    df.año = df.año.astype(int)
+    df.year = df.year.astype(int)
     
-    #Año con más horas jugadas
-    a = int(df.iloc[0]["año"])
+    #year con más horas jugadas
+    a = int(df.iloc[0]["year"])
     
     #Retorno
-    return {f"Año de lanzamiento con más horas jugadas para Género {genero}":a}
+    return {f"year de lanzamiento con más horas jugadas para Género {genero}":a}
 
 """
 |  Devolver el usuario con más horas jugadas para un género dado.
@@ -191,39 +191,39 @@ def user_for_genre(genero: str):
     #Obtener la información de los juegos y los items (que contiene las horas jugadas por juego y por usuario)
     df = pd.merge(juegos, items, on='item_id')
     
-    # - Filtrar por el género dado y seleccionar las columnas user_id, año y playtime_forever (horas totales jugadas)
-    # - Agrupar por año y sumar las horas jugadas por año
-    df = df[df.genres.str.contains(genero)][["user_id", "año", "playtime_forever"]]\
-    .groupby(["año", "user_id"]).sum()
-    df.año = df.año.astype(int)
+    # - Filtrar por el género dado y seleccionar las columnas user_id, year y playtime_forever (horas totales jugadas)
+    # - Agrupar por year y sumar las horas jugadas por year
+    df = df[df.genres.str.contains(genero)][["user_id", "year", "playtime_forever"]]\
+    .groupby(["year", "user_id"]).sum()
+    df.year = df.year.astype(int)
     
     # Obtener la suma del tiempo jugado por usuario
     sum_usr = df.groupby("user_id")["playtime_forever"].sum().sort_values(ascending=False)
     # Obtener el usuario con más horas jugadas
     max_usr = sum_usr.idxmax()
     
-    #Obtener las horas jugadas por el usuario en cada año y ordenar por año
-    df = df[df.user_id == max_usr].loc[:,["año", "playtime_forever"]]\
-    .set_index("año").sort_index()
-    horas = [{"Año":row.año, "Horas":row.playtime_forever} for row in df.reset_index().itertuples()]
+    #Obtener las horas jugadas por el usuario en cada year y ordenar por year
+    df = df[df.user_id == max_usr].loc[:,["year", "playtime_forever"]]\
+    .set_index("year").sort_index()
+    horas = [{"year":row.year, "Horas":row.playtime_forever} for row in df.reset_index().itertuples()]
     
-    #Retornar el usuario y las horas jugadas por año como un diccionario
+    #Retornar el usuario y las horas jugadas por year como un diccionario
     return {
       "Usuario con más horas jugadas": f"{max_usr}",
-      "Horas jugadas por año": horas
+      "Horas jugadas por year": horas
     }
 
 """
-  Top 3 de juegos recomendados por usuarios para el año dado.
-  Input: año, int
+  Top 3 de juegos recomendados por usuarios para el year dado.
+  Input: year, int
 """
-@app.get("/users_recommend/{año}")
-def users_recommend(año: int):
+@app.get("/users_recommend/{year}")
+def users_recommend(year: int):
     #Obtener la información de los juegos y las reviews (que contiene las recomendaciones y el análisis de sentimientos)
     df = pd.merge(juegos, reviews, on='item_id')
     
     #Obtener las columnas necesarias
-    df = df[df["año"] == año][["app_name", "recommend", "sentiment_analysis"]]
+    df = df[df["year"] == year][["app_name", "recommend", "sentiment_analysis"]]
     #Filtrar los juegos recomendados y con reseñas positivas o neutrales
     mask = (df["recommend"] == True) & (df["sentiment_analysis"] > 0)
     df = df[mask]
@@ -239,16 +239,16 @@ def users_recommend(año: int):
     ]
 
 """
-  Top 3 de desarrolladores con juegos MÁS recomendados por usuarios para el año dado.
-  Input: año, int
+  Top 3 de desarrolladores con juegos MÁS recomendados por usuarios para el year dado.
+  Input: year, int
 """
-@app.get("/best_developer_year/{año}")
-def best_developer_year(año: int):
+@app.get("/best_developer_year/{year}")
+def best_developer_year(year: int):
     #Obtener la información de los juegos y las reviews (que contiene las recomendaciones y el análisis de sentimientos)
     df = pd.merge(juegos, reviews, on='item_id')
     
     #Obtener las columnas necesarias
-    df = df[df["año"] == año][["developer", "recommend", "sentiment_analysis"]]
+    df = df[df["year"] == year][["developer", "recommend", "sentiment_analysis"]]
     #Filtrar los juegos recomendados y con reseñas positivas o neutrales
     mask = (df["recommend"] == True) & (df["sentiment_analysis"] > 0)
     df = df[mask]
@@ -264,7 +264,7 @@ def best_developer_year(año: int):
 
 """
   Resumen de la cantidad de reseñas positivas, neutrales y negativas para un desarrollador.
-  Input: año, int
+  Input: year, int
 """
 @app.get("/developer_reviews_analysis/{dev}")
 def developer_reviews_analysis(dev: str):
@@ -289,7 +289,7 @@ def developer_reviews_analysis(dev: str):
 def recomendacion_juego(item_id: int):
     #Si la matriz de similaridad de juegos no está inicializada, hacerlo
     if similarity_games is None:
-        init_similarity_games()
+        await init_similarity_games()
 
     #Buscar los juegos similares
     juegos_rec = similarity_games[item_id].sort_values(ascending=False).drop(item_id).head(5).index.to_list()
@@ -304,12 +304,12 @@ def recomendacion_juego(item_id: int):
 """
     Recomendar 5 juegos para el usuario ingresado
 """
-@app.get("/recomendacion_juego/{user_id}")
+@app.get("/recomendacion_usuario/{user_id}")
 def recomendacion_usuario(user_id: str):
     #Si la matriz de similaridad de usuarios no está inicializada, hacerlo
     #Tener en cuenta que también se inicializa la matriz users_vs_games
     if similarity_users is None:
-        init_similarity_users()
+        await init_similarity_users()
 
     num_usrs = 5
     iters = 10
