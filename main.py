@@ -272,7 +272,7 @@ def developer_reviews_analysis(dev: str):
     #Retornar el resumen como un diccionario
     puntajes = []
     for i in df.index:
-    puntajes.append(f"{i} = {df[i]}")
+        puntajes.append(f"{i} = {df[i]}")
     return {f"{dev}":puntajes}
 
 """
