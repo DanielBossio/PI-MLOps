@@ -41,7 +41,7 @@ async def init_similarity_games():
     similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
 
 #Matriz de similaridad de usuarios
-asyn def init_similarity_users():
+async def init_similarity_users():
     global similarity_users, users_vs_games
     #Inicializar la matriz de similaridad de juegos si no se ha hecho aún
     if similarity_games is None:
