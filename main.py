@@ -12,7 +12,7 @@ app = FastAPI()
 juegos, items, reviews, similarity_users, similarity_games, users_vs_games = None, None, None, None, None, None
 
 #Matriz de similaridad de juegos
-async def init_similarity_games():
+def init_similarity_games():
     global similarity_games
     juegos_data = juegos["item_id","price","free","year","genres"]
     generos = pd.read_csv('genres.csv')
@@ -41,11 +41,11 @@ async def init_similarity_games():
     similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
 
 #Matriz de similaridad de usuarios
-async def init_similarity_users():
+def init_similarity_users():
     global similarity_users, users_vs_games
     #Inicializar la matriz de similaridad de juegos si no se ha hecho aún
     if similarity_games is None:
-        await init_similarity_games()
+        init_similarity_games()
 
     #El puntaje a operar es el promedio entre el análisis de sentimientos y si se recomienda o no (entre 0 y 1.5)
     reviews_data = reviews["item_id","user_id","recommend","sentiment_analysis"]
@@ -75,27 +75,24 @@ async def init_similarity_users():
     similarity_users = pd.DataFrame(similarity_users, index=users_vs_games.index, columns=users_vs_games.index)
 
 #Inicializar los modelos al empezar
-@app.on_event("startup")
-async def startup_event():
-    global juegos, items, reviews
-    juegos = pd.read_csv('games.csv')
-    reviews = pd.read_csv('reviews.csv')
-    items_arr = []
-    for i in range(6):
-        items_arr.append(pd.read_csv(f'items{i}.csv'))
-    items = pd.concat(items_arr)
+juegos = pd.read_csv('games.csv')
+reviews = pd.read_csv('reviews.csv')
+items_arr = []
+for i in range(6):
+    items_arr.append(pd.read_csv(f'items{i}.csv'))
+items = pd.concat(items_arr)
 
-    patron = re.compile(r'\d+.*\d*')
+patron = re.compile(r'\d+.*\d*')
 
-    juegos.release_date = pd.to_datetime(juegos.release_date)
-    juegos['year'] = juegos.release_date.dt.year
-    juegos["free"] = juegos.price.apply(lambda x: "free to play".find(x.lower().strip()) >= 0)
-    juegos["price"] = juegos.price.apply(lambda x: float(x) if patron.fullmatch(x) else 0)
-    juegos["price"] = juegos.price.astype(float, errors='ignore')
+juegos.release_date = pd.to_datetime(juegos.release_date)
+juegos['year'] = juegos.release_date.dt.year
+juegos["free"] = juegos.price.apply(lambda x: "free to play".find(x.lower().strip()) >= 0)
+juegos["price"] = juegos.price.apply(lambda x: float(x) if patron.fullmatch(x) else 0)
+juegos["price"] = juegos.price.astype(float, errors='ignore')
 
-    #Crear matrices de similaridad de los juegos y de los usuarios
-    await init_similarity_games()
-    await init_similarity_users()
+#Crear matrices de similaridad de los juegos y de los usuarios
+init_similarity_games()
+init_similarity_users()
 
 #Método de la página raíz
 @app.get("/")
