@@ -23,7 +23,7 @@ async def init_similarity_games():
     juegos_data.drop(columns=['genres'], inplace=True)
 
     #Cambiar la columna Free a entero
-    juegos_data.free = juegos_cp.free.astype(int)
+    juegos_data.free = juegos_data.free.astype(int)
 
     #Poner como índice el item_id
     juegos_data.set_index("item_id",inplace=True)
