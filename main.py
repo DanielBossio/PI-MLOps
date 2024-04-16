@@ -11,10 +11,30 @@ from sklearn.metrics.pairwise import cosine_similarity
 app = FastAPI()
 juegos, items, reviews, similarity_users, similarity_games, users_vs_games = None, None, None, None, None, None
 
+#Inicializar los modelos al empezar
+juegos = pd.read_csv('games.csv')
+reviews = pd.read_csv('reviews.csv')
+items_arr = []
+for i in range(6):
+    items_arr.append(pd.read_csv(f'items{i}.csv'))
+items = pd.concat(items_arr)
+
+patron = re.compile(r'\d+.*\d*')
+
+juegos.release_date = pd.to_datetime(juegos.release_date)
+juegos['year'] = juegos.release_date.dt.year
+juegos["free"] = juegos.price.apply(lambda x: "free to play".find(x.lower().strip()) >= 0)
+juegos["price"] = juegos.price.apply(lambda x: float(x) if patron.fullmatch(x) else 0)
+juegos["price"] = juegos.price.astype(float, errors='ignore')
+
+#Crear matrices de similaridad de los juegos y de los usuarios
+init_similarity_games()
+init_similarity_users()
+
 #Matriz de similaridad de juegos
 def init_similarity_games():
     global similarity_games
-    juegos_data = juegos["item_id","price","free","year","genres"]
+    juegos_data = juegos[["item_id","price","free","year","genres"]]
     generos = pd.read_csv('genres.csv')
     
     #Codificar la columna géneros, indicando con 1 o 0 si el juego  contiene o no la categoría
@@ -48,7 +68,7 @@ def init_similarity_users():
         init_similarity_games()
 
     #El puntaje a operar es el promedio entre el análisis de sentimientos y si se recomienda o no (entre 0 y 1.5)
-    reviews_data = reviews["item_id","user_id","recommend","sentiment_analysis"]
+    reviews_data = reviews[["item_id","user_id","recommend","sentiment_analysis"]]
     reviews_data["puntaje"] = (reviews_data.sentiment_analysis+reviews_data.recommend)/2
     reviews_data.drop(columns=["sentiment_analysis","recommend"],inplace=True)
 
@@ -73,26 +93,6 @@ def init_similarity_users():
     #Matriz de similaridad de usuarios
     similarity_users = cosine_similarity(users_vs_games)
     similarity_users = pd.DataFrame(similarity_users, index=users_vs_games.index, columns=users_vs_games.index)
-
-#Inicializar los modelos al empezar
-juegos = pd.read_csv('games.csv')
-reviews = pd.read_csv('reviews.csv')
-items_arr = []
-for i in range(6):
-    items_arr.append(pd.read_csv(f'items{i}.csv'))
-items = pd.concat(items_arr)
-
-patron = re.compile(r'\d+.*\d*')
-
-juegos.release_date = pd.to_datetime(juegos.release_date)
-juegos['year'] = juegos.release_date.dt.year
-juegos["free"] = juegos.price.apply(lambda x: "free to play".find(x.lower().strip()) >= 0)
-juegos["price"] = juegos.price.apply(lambda x: float(x) if patron.fullmatch(x) else 0)
-juegos["price"] = juegos.price.astype(float, errors='ignore')
-
-#Crear matrices de similaridad de los juegos y de los usuarios
-init_similarity_games()
-init_similarity_users()
 
 #Método de la página raíz
 @app.get("/")
