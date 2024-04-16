@@ -289,7 +289,7 @@ def developer_reviews_analysis(dev: str):
 def recomendacion_juego(item_id: int):
     #Si la matriz de similaridad de juegos no está inicializada, hacerlo
     if similarity_games is None:
-        await init_similarity_games()
+        init_similarity_games()
 
     #Buscar los juegos similares
     juegos_rec = similarity_games[item_id].sort_values(ascending=False).drop(item_id).head(5).index.to_list()
@@ -309,7 +309,7 @@ def recomendacion_usuario(user_id: str):
     #Si la matriz de similaridad de usuarios no está inicializada, hacerlo
     #Tener en cuenta que también se inicializa la matriz users_vs_games
     if similarity_users is None:
-        await init_similarity_users()
+        init_similarity_users()
 
     num_usrs = 5
     iters = 10
