@@ -47,6 +47,7 @@ async def init_similarity_users():
     if similarity_games is None:
         init_similarity_games()
 
+    #El puntaje a operar es el promedio entre el análisis de sentimientos y si se recomienda o no (entre 0 y 1.5)
     reviews_data = reviews["item_id","user_id","recommend","sentiment_analysis"]
     reviews_data["puntaje"] = (reviews_data.sentiment_analysis+reviews_data.recommend)/2
     reviews_data.drop(columns=["sentiment_analysis","recommend"],inplace=True)
@@ -59,10 +60,15 @@ async def init_similarity_users():
     for item in users_vs_games.columns:
         #Obtener los usuarios y las horas jugadas para cada juego/item
         items_usr = items[items.item_id == item][["playtime_forever", "user_id"]].drop_duplicates(subset="user_id").set_index("user_id")["playtime_forever"]
-        #Para cada usuario, asignar las horas jugadas (entre 10) a la tabla pivote
+        #Para cada usuario, multiplicar el puntaje actual por las horas jugadas y asignar a la tabla pivote
+        #Si jugó más de 350 horas (75%), el puntaje se multiplica por 10
+        #De esta forma, si el usuario jugó muchas horas un juego pero tiene reseñas negativas y/o no se recomienda, no se considerará
         for user in [x for x in items_usr.index if x in cols]:
             hrs = items_usr[user]
-            users_vs_games.loc[user,item] += hrs/10 if hrs is not None else 0
+            if hrs >= 350:
+                users_vs_games.loc[user,item] *= 10
+            else:
+                users_vs_games.loc[user,item] *= hrs/35 if hrs is not None else 1
 
     #Matriz de similaridad de usuarios
     similarity_users = cosine_similarity(res)
