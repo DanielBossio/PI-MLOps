@@ -71,8 +71,8 @@ async def init_similarity_users():
                 users_vs_games.loc[user,item] *= hrs/35 if hrs is not None else 1
 
     #Matriz de similaridad de usuarios
-    similarity_users = cosine_similarity(res)
-    similarity_users = pd.DataFrame(similarity_users, index=res.index, columns=res.index)
+    similarity_users = cosine_similarity(users_vs_games)
+    similarity_users = pd.DataFrame(similarity_users, index=users_vs_games.index, columns=users_vs_games.index)
 
 #Inicializar los modelos al empezar
 @app.on_event("startup")
@@ -292,11 +292,11 @@ def recomendacion_juego(item_id: int):
         init_similarity_games()
 
     #Buscar los juegos similares
-    juegos_rec = similarities[item_id].sort_values(ascending=False).drop(item_id).head(5).index.to_list()
+    juegos_rec = similarity_games[item_id].sort_values(ascending=False).drop(item_id).head(5).index.to_list()
     #Si los juegos recomendados están dentro de la información de juegos disponible, reemplazar la id por el nombre
     for i in range(5):
         if juegos_rec[i] in juegos.item_id:
-            juegos_rec[i] = juegos[juegos.item_id == item].app_name.values[0]
+            juegos_rec[i] = juegos[juegos.item_id == item_id].app_name.values[0]
 
     #Retornar
     return juegos_rec
@@ -315,14 +315,14 @@ def recomendacion_usuario(user_id: str):
     iters = 10
     juegos_rec = {}
     #Juegos jugados por el usuario
-    juegos_user = users_vs_games.loc[user]
+    juegos_user = users_vs_games.loc[user_id]
     juegos_user = juegos_user[juegos_user > 0].index.to_list()
     #Buscar los usuarios con gustos similares, limitando a 10 iteraciones
     while iters > 0:
         #Encontrar n usuarios
-        usr_similares = similarity_users[user_id].sort_values(ascending=False).drop(user).head(num_usrs).index.to_list()
+        usr_similares = similarity_users[user_id].sort_values(ascending=False).drop(user_id).head(num_usrs).index.to_list()
         #Buscar los juegos jugados por esos usuarios que no hayan sido jugados por el usuario ingresado
-        for usr in similares_user.index:
+        for usr in usr_similares.index:
             for item, val in users_vs_games.loc[usr].sort_values(ascending=False).head(num_usrs).items():
                 #Comparar que el juego no haya sido jugado por el usuario
                 if item not in juegos_user:
