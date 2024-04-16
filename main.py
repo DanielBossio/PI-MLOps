@@ -12,7 +12,7 @@ app = FastAPI()
 juegos, items, reviews, similarity_users, similarity_games, users_vs_games = None, None, None, None, None, None
 
 #Matriz de similaridad de juegos
-async def init_similarity_games():
+def init_similarity_games():
     global similarity_games
     juegos_data = juegos["item_id","price","free","año","genres"]
     generos = pd.read_csv('genres.csv')
@@ -41,7 +41,7 @@ async def init_similarity_games():
     similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
 
 #Matriz de similaridad de usuarios
-async def init_similarity_users():
+def init_similarity_users():
     global similarity_users, users_vs_games
     #Inicializar la matriz de similaridad de juegos si no se ha hecho aún
     if similarity_games is None:
@@ -76,7 +76,7 @@ async def init_similarity_users():
 
 #Inicializar los modelos al empezar
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
     global juegos, items, reviews
     juegos = pd.read_csv('games.csv')
     reviews = pd.read_csv('reviews.csv')
@@ -133,7 +133,7 @@ def developer(developer: str):
     #Unir los dos dataframes
     conteo = pd.merge(conteo, free, on="año")
     conteo.free = round(conteo.free/conteo.app_name*100,2)
-    return conteo
+    return conteo.to_dict()
 
 """
   cantidad de dinero gastado por el usuario, porcentaje de recomendación en base a reviews.recommend y cantidad de items
