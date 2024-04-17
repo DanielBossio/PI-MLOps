@@ -42,5 +42,5 @@ En resumen, el EDA hecho para los archivos es el siguiente:
 # 4. Modelo de ML
 Archivo principal: [PI-MLOps-Modelo](), [main.py](main.py)<br>
 Se planteó desarrollar un sistema de recomendación para proponer ítems/juegos similares en base al id de un ítem o un usuario proporcionado, y desplegarlo como endpoint en el API en Render.<br>
-A continuación se explica el funcionamiento de los endpoint:<br>
-- **recomendacion_juego**: En base a la operación similitud del coseno, recomendar 5 juegos similares al ingresado como parámetro *(item_id, string)*. Al iniciar la aplicación se calcula la matriz de similitudes de juegos, y cuando se presenta una solicitud se busca en la misma los juegos con mayor similitud al ingresado.
+A continuación se explica el funcionamiento del endpoint:<br>
+**recomendacion_juego**: En base a la operación similitud del coseno, recomendar 5 juegos similares al ingresado como parámetro *(item_id, string)*. Al iniciar la aplicación se calcula la matriz de similitudes de juegos, y cuando se presenta una solicitud se busca en la misma los juegos con mayor similitud al ingresado.
