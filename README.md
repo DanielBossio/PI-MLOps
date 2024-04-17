@@ -3,7 +3,7 @@
 ## Bootcamp Data Science - Henry
 ## *Daniel Andrés Bossio Pérez - DataFT21*
 # 1. Proceso ETL
-Archivo principal: [PI-MLOps-ETL]()<br>
+Archivo principal: [PI-MLOps-ETL](PI_MLOps_ETL.ipynb)<br>
 Se proporcionaron tres datasets: games, reviews e items.<br>
 *Para el archivo games:*
 - Se leyó el archivo con pandas.read_json y se eliminaron las filas nulas.
@@ -24,7 +24,7 @@ Se proporcionaron tres datasets: games, reviews e items.<br>
 - Se eliminaron los duplicados y se seleccionaron las columnas item_id, playtime_forever, user_id (por cuestiones del volumen de los datos).
 - Se guardó el dataframe, dividiéndolo en 6 archivos.
 # 2. Desarrollo de la API
-Archivo principal: [main.py](main.py)
+Archivo principal: [main.py](main.py). [PI_MLOps_Endpoints](PI_MLOps_ETL.ipynb)
 <br>La API fue implementada utilizando el framework FastAPI y disponibilizada con el servicio en la nube Render. Además de mensajes root e index, las funciones desarrolladas son:
 - **developer**: Cantidad de items y porcentaje de contenido Free por año según empresa desarrolladora. Parámetro: developer, string.
 - **userdata**: Cantidad de dinero gastado por el usuario, porcentaje de recomendación en base a reviews.recommend y cantidad de items del usuario. Parámetro: user, string.
@@ -34,13 +34,13 @@ Archivo principal: [main.py](main.py)
 - **best_developer_year**: Top 3 de desarrolladores con juegos más recomendados por usuarios para el año dado. Parámetro: year, int.
 - **developer_reviews_analysis**: Resumen de la cantidad de reseñas positivas, neutrales y negativas para un desarrollador. Parámetro: year, int.
 # 3. EDA
-Archivo principal: [PI-MLOps-EDA]()<br>
+Archivo principal: [PI-MLOps-EDA](PI_MLOps_EDA.ipynb)<br>
 En resumen, el EDA hecho para los archivos es el siguiente:
 - Archivo games (juegos): Revisar medidas estadísticas (media, std, cuartiles), revisar rangos de valores de precios y años, frecuencias por free_to_play, géneros y desarrolladoras, promedio y mediana de los precios entre los desarrolladores y entre los géneros, cantidad de juegos por año para los desarrolladores.
 - Archivo reviews: Revisar medidas estadísticas (media, std, cuartiles), frecuencias de recomendaciones y valoraciones positivas, neutrales o negativas.
 - Archivo items: Revisar medidas estadísticas (media, std, cuartiles), distribución de valores de la cantidad de horas jugadas.
 # 4. Modelo de ML
-Archivo principal: [PI-MLOps-Modelo](), [main.py](main.py)<br>
+Archivo principal: [PI-MLOps-Modelo](PI_MLOps_Modelo.ipynb), [main.py](main.py)<br>
 Se planteó desarrollar un sistema de recomendación para proponer ítems/juegos similares en base al id de un ítem o un usuario proporcionado, y desplegarlo como endpoint en el API en Render.<br>
 A continuación se explica el funcionamiento del endpoint:<br>
 **recomendacion_juego**: En base a la operación similitud del coseno, recomendar 5 juegos similares al ingresado como parámetro *(item_id, string)*. Al iniciar la aplicación se calcula la matriz de similitudes de juegos, y cuando se presenta una solicitud se busca en la misma los juegos con mayor similitud al ingresado.
