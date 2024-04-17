@@ -41,7 +41,6 @@ En resumen, el EDA hecho para los archivos es el siguiente:
 - Archivo items: Revisar medidas estadísticas (media, std, cuartiles), distribución de valores de la cantidad de horas jugadas.
 # 4. Modelo de ML
 Archivo principal: [PI-MLOps-Modelo](), [main.py](main.py)<br>
-Se planteó desarrollar un sistema de recomendación para proponer ítems/juegos similares en base al id de un ítem o un usuario proporcionado, y desplegarlos como endpoints en el API en Render.<br>
+Se planteó desarrollar un sistema de recomendación para proponer ítems/juegos similares en base al id de un ítem o un usuario proporcionado, y desplegarlo como endpoint en el API en Render.<br>
 A continuación se explica el funcionamiento de los endpoint:<br>
 - **recomendacion_juego**: En base a la operación similitud del coseno, recomendar 5 juegos similares al ingresado como parámetro *(item_id, string)*. Al iniciar la aplicación se calcula la matriz de similitudes de juegos, y cuando se presenta una solicitud se busca en la misma los juegos con mayor similitud al ingresado.
-- **recomendacion_usuario**: Recomendar 5 juegos basándose en los gustos del usuario ingresado como parámetro *(user_id, string)*. Al iniciar la aplicación, se calcula el peso de cada juego por cada usuario *(matriz users_vs_games)*, utilizando el valor de la recomendación (True o False), el análisis de sentimientos (0 a 2) y las horas jugadas; asimismo se calcula la matriz de similitudes de usuarios utilizando la operación similitud del coseno. Cuando se presenta una petición, se buscan los usuarios con gustos similares al ingresado, y se recomiendan los juegos jugados por dichos usuarios, que no hayan sido jugados por el usuario objetivo.
