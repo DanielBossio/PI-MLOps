@@ -30,7 +30,8 @@ juegos["price"] = juegos.price.astype(float, errors='ignore')
 #Matriz de similaridad de juegos
 def init_similarity_games():
     global similarity_games
-    juegos_data = juegos[["item_id","price","free","year","genres"]]
+    juegos_data = juegos.copy()
+    juegos_data = juegos_data[["item_id","price","free","year","genres"]]
     generos = pd.read_csv('genres.csv')
     
     #Codificar la columna géneros, indicando con 1 o 0 si el juego  contiene o no la categoría
@@ -64,7 +65,8 @@ def init_similarity_users():
         init_similarity_games()
 
     #El puntaje a operar es el promedio entre el análisis de sentimientos y si se recomienda o no (entre 0 y 1.5)
-    reviews_data = reviews[["item_id","user_id","recommend","sentiment_analysis"]]
+    reviews_data = reviews.copy()
+    reviews_data = reviews_data[["item_id","user_id","recommend","sentiment_analysis"]]
     reviews_data["puntaje"] = (reviews_data.sentiment_analysis+reviews_data.recommend)/2
     reviews_data.drop(columns=["sentiment_analysis","recommend"],inplace=True)
 
