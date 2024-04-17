@@ -27,10 +27,6 @@ juegos["free"] = juegos.price.apply(lambda x: "free to play".find(x.lower().stri
 juegos["price"] = juegos.price.apply(lambda x: float(x) if patron.fullmatch(x) else 0)
 juegos["price"] = juegos.price.astype(float, errors='ignore')
 
-#Crear matrices de similaridad de los juegos y de los usuarios
-init_similarity_games()
-init_similarity_users()
-
 #Matriz de similaridad de juegos
 def init_similarity_games():
     global similarity_games
@@ -93,6 +89,10 @@ def init_similarity_users():
     #Matriz de similaridad de usuarios
     similarity_users = cosine_similarity(users_vs_games)
     similarity_users = pd.DataFrame(similarity_users, index=users_vs_games.index, columns=users_vs_games.index)
+
+#Crear matrices de similaridad de los juegos y de los usuarios
+init_similarity_games()
+init_similarity_users()
 
 #Método de la página raíz
 @app.get("/")
