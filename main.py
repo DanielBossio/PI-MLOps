@@ -12,11 +12,11 @@ app = FastAPI()
 juegos, items, reviews, similarity_games = None, None, None, None
 
 #Inicializar los modelos al empezar
-juegos = pd.read_csv('games.csv')
-reviews = pd.read_csv('reviews.csv')
+juegos = pd.read_csv('Datasets/games.csv')
+reviews = pd.read_csv('Datasets/reviews.csv')
 items_arr = []
 for i in range(6):
-    items_arr.append(pd.read_csv(f'items{i}.csv'))
+    items_arr.append(pd.read_csv(f'Datasets/items{i}.csv'))
 items = pd.concat(items_arr)
 
 patron = re.compile(r'\d+.*\d*')
