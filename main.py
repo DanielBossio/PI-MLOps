@@ -32,7 +32,7 @@ def init_similarity_games():
     global similarity_games
     juegos_data = juegos.copy()
     juegos_data = juegos_data[["item_id","price","free","year","genres"]]
-    generos = pd.read_csv('genres.csv')
+    generos = pd.read_csv('Datasets/genres.csv')
     
     #Codificar la columna géneros, indicando con 1 o 0 si el juego  contiene o no la categoría
     for gen in generos.genre:
