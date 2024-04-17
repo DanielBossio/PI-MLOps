@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 #Instanciar FastAPI
 app = FastAPI()
-juegos, items, reviews, similarity_users, similarity_games, users_vs_games = None, None, None, None, None, None
+juegos, items, reviews, similarity_games = None, None, None, None
 
 #Inicializar los modelos al empezar
 juegos = pd.read_csv('games.csv')
@@ -45,11 +45,8 @@ def init_similarity_games():
     #Poner como índice el item_id
     juegos_data.set_index("item_id",inplace=True)
 
-    #Imputar faltantes en la columna year y cambiar a entero
-    juegos_data.year.fillna(juegos_data.year.median(),inplace=True)
-    juegos_data.year = juegos_data.year.astype(int)
-
-    #Escalar los datos(columna year)
+    #Imputar faltantes en la columna year, cambiar a entero y escalar
+    juegos_data.year = juegos_data.year.fillna(juegos_data.year.median()).astype(int)
     juegos_data.year = minmax_scale(juegos_data.year)
     #Sparsity de los datos: 0.18
 
@@ -57,44 +54,8 @@ def init_similarity_games():
     similarity_games = cosine_similarity(juegos_data)
     similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
 
-#Matriz de similaridad de usuarios
-def init_similarity_users():
-    global similarity_users, users_vs_games
-    #Inicializar la matriz de similaridad de juegos si no se ha hecho aún
-    if similarity_games is None:
-        init_similarity_games()
-
-    #El puntaje a operar es el promedio entre el análisis de sentimientos y si se recomienda o no (entre 0 y 1.5)
-    reviews_data = reviews.copy()
-    reviews_data = reviews_data[["item_id","user_id","recommend","sentiment_analysis"]]
-    reviews_data["puntaje"] = (reviews_data.sentiment_analysis+reviews_data.recommend)/2
-    reviews_data.drop(columns=["sentiment_analysis","recommend"],inplace=True)
-
-    #Crear tabla pivote con el puntaje de los juegos por usuario, sparsity = 6*10^-4
-    users_vs_games = reviews_data.pivot_table(index="user_id",columns="item_id",values="puntaje").fillna(0)
-
-    #Utilizar las horas jugadas por los usuarios para agregar datos de estudio, sparsity = 0.016
-    cols = users_vs_games.index
-    for item in users_vs_games.columns:
-        #Obtener los usuarios y las horas jugadas para cada juego/item
-        items_usr = items[items.item_id == item][["playtime_forever", "user_id"]].drop_duplicates(subset="user_id").set_index("user_id")["playtime_forever"]
-        #Para cada usuario, multiplicar el puntaje actual por las horas jugadas y asignar a la tabla pivote
-        #Si jugó más de 350 horas (75%), el puntaje se multiplica por 10
-        #De esta forma, si el usuario jugó muchas horas un juego pero tiene reseñas negativas y/o no se recomienda, no se considerará
-        for user in [x for x in items_usr.index if x in cols]:
-            hrs = items_usr[user]
-            if hrs >= 350:
-                users_vs_games.loc[user,item] *= 10
-            else:
-                users_vs_games.loc[user,item] *= hrs/35 if hrs is not None else 1
-
-    #Matriz de similaridad de usuarios
-    similarity_users = cosine_similarity(users_vs_games)
-    similarity_users = pd.DataFrame(similarity_users, index=users_vs_games.index, columns=users_vs_games.index)
-
-#Crear matrices de similaridad de los juegos y de los usuarios
+#Crear matrices de similaridad de los juegos
 init_similarity_games()
-init_similarity_users()
 
 #Método de la página raíz
 @app.get("/")
@@ -193,7 +154,7 @@ def user_for_genre(genero: str):
     # - Filtrar por el género dado y seleccionar las columnas user_id, year y playtime_forever (horas totales jugadas)
     # - Agrupar por year y sumar las horas jugadas por year
     df = df[df.genres.str.contains(genero)][["user_id", "year", "playtime_forever"]]\
-    .groupby(["year", "user_id"]).sum()
+    .groupby(["year", "user_id"]).sum().reset_index()
     df.year = df.year.astype(int)
     
     # Obtener la suma del tiempo jugado por usuario
@@ -300,46 +261,3 @@ def recomendacion_juego(item_id: int):
     #Retornar
     return juegos_rec
 
-"""
-    Recomendar 5 juegos para el usuario ingresado
-"""
-@app.get("/recomendacion_usuario/{user_id}")
-def recomendacion_usuario(user_id: str):
-    #Si la matriz de similaridad de usuarios no está inicializada, hacerlo
-    #Tener en cuenta que también se inicializa la matriz users_vs_games
-    if similarity_users is None:
-        init_similarity_users()
-
-    num_usrs = 5
-    iters = 10
-    juegos_rec = {}
-    #Juegos jugados por el usuario
-    juegos_user = users_vs_games.loc[user_id]
-    juegos_user = juegos_user[juegos_user > 0].index.to_list()
-    #Buscar los usuarios con gustos similares, limitando a 10 iteraciones
-    while iters > 0:
-        #Encontrar n usuarios
-        usr_similares = similarity_users[user_id].sort_values(ascending=False).drop(user_id).head(num_usrs).index.to_list()
-        #Buscar los juegos jugados por esos usuarios que no hayan sido jugados por el usuario ingresado
-        for usr in usr_similares.index:
-            for item, val in users_vs_games.loc[usr].sort_values(ascending=False).head(num_usrs).items():
-                #Comparar que el juego no haya sido jugado por el usuario
-                if item not in juegos_user:
-                    #Utilizar el valor en users_vs_games como medida de recomendación
-                    if item in juegos_rec:
-                        juegos_rec[item] += val
-                    else:
-                        juegos_rec[item] = val
-        if len(juegos_rec) >= 5: break
-        num_usrs += 5
-        iters -= 1
-
-    #Obtener los 5 juegos más recomendados
-    juegos_rec = pd.Series(juegos_rec).sort_values(ascending=False).head(5).index.to_list()
-    #Si los juegos recomendados están dentro de la información de juegos disponible, reemplazar la id por el nombre
-    for i in range(len(juegos_rec)):
-        if juegos_rec[i] in juegos.item_id:
-            juegos_rec[i] = juegos[juegos.item_id == item].app_name.values[0]
-
-    #Retornar
-    return juegos_rec
