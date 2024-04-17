@@ -29,30 +29,33 @@ juegos["price"] = juegos.price.astype(float, errors='ignore')
 
 #Matriz de similaridad de juegos
 def init_similarity_games():
-    global similarity_games
-    juegos_data = juegos.copy()
-    juegos_data = juegos_data[["item_id","price","free","year","genres"]]
-    generos = pd.read_csv('Datasets/genres.csv')
+    try:
+        global similarity_games
+        juegos_data = juegos.copy()
+        juegos_data = juegos_data[["item_id","price","free","year","genres"]]
+        generos = pd.read_csv('Datasets/genres.csv')
+        
+        #Codificar la columna géneros, indicando con 1 o 0 si el juego  contiene o no la categoría
+        for gen in generos.genre:
+            juegos_data[gen] = juegos_data.genres.apply(lambda x: 1 if gen in x else 0)
+        juegos_data.drop(columns=['genres'], inplace=True)
     
-    #Codificar la columna géneros, indicando con 1 o 0 si el juego  contiene o no la categoría
-    for gen in generos.genre:
-        juegos_data[gen] = juegos_data.genres.apply(lambda x: 1 if gen in x else 0)
-    juegos_data.drop(columns=['genres'], inplace=True)
-
-    #Cambiar la columna Free a entero
-    juegos_data.free = juegos_data.free.astype(int)
-
-    #Poner como índice el item_id
-    juegos_data.set_index("item_id",inplace=True)
-
-    #Imputar faltantes en la columna year, cambiar a entero y escalar
-    juegos_data.year = juegos_data.year.fillna(juegos_data.year.median()).astype(int)
-    juegos_data.year = minmax_scale(juegos_data.year)
-    #Sparsity de los datos: 0.18
-
-    #Matriz de similaridad
-    similarity_games = cosine_similarity(juegos_data)
-    similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
+        #Cambiar la columna Free a entero
+        juegos_data.free = juegos_data.free.astype(int)
+    
+        #Poner como índice el item_id
+        juegos_data.set_index("item_id",inplace=True)
+    
+        #Imputar faltantes en la columna year, cambiar a entero y escalar
+        juegos_data.year = juegos_data.year.fillna(juegos_data.year.median()).astype(int)
+        juegos_data.year = minmax_scale(juegos_data.year)
+        #Sparsity de los datos: 0.18
+    
+        #Matriz de similaridad
+        similarity_games = cosine_similarity(juegos_data)
+        similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
+    except:
+        return
 
 #Crear matrices de similaridad de los juegos
 init_similarity_games()
@@ -251,13 +254,16 @@ def recomendacion_juego(item_id: int):
     if similarity_games is None:
         init_similarity_games()
 
-    #Buscar los juegos similares
-    juegos_rec = similarity_games[item_id].sort_values(ascending=False).drop(item_id).head(5).index.to_list()
-    #Si los juegos recomendados están dentro de la información de juegos disponible, reemplazar la id por el nombre
-    for i in range(5):
-        if juegos_rec[i] in juegos.item_id:
-            juegos_rec[i] = juegos[juegos.item_id == item_id].app_name.values[0]
-
-    #Retornar
-    return juegos_rec
+    try:
+        #Buscar los juegos similares
+        juegos_rec = similarity_games[item_id].sort_values(ascending=False).drop(item_id).head(5).index.to_list()
+        #Si los juegos recomendados están dentro de la información de juegos disponible, reemplazar la id por el nombre
+        for i in range(5):
+            if juegos_rec[i] in juegos.item_id:
+                juegos_rec[i] = juegos[juegos.item_id == item_id].app_name.values[0]
+    
+        #Retornar
+        return juegos_rec
+    except Exception as e:
+        return {"Error: ":e}
 
