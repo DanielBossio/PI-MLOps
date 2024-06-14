@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 #Instanciar FastAPI
 app = FastAPI()
-juegos, items, reviews, similarity_games = None, None, None, None
+juegos, items, reviews, games_data = None, None, None, None
 
 #Inicializar los modelos al empezar
 juegos = pd.read_csv('Datasets/games.csv')
@@ -30,30 +30,25 @@ juegos["price"] = juegos.price.astype(float, errors='ignore')
 #Matriz de similaridad de juegos
 def init_similarity_games():
     try:
-        global similarity_games
-        juegos_data = juegos.copy()
-        juegos_data = juegos_data[["item_id","price","free","year","genres"]]
-        generos = pd.read_csv('Datasets/genres.csv')
+        global games_data
+        games_data = juegos.copy()
+        games_data = games_data[["item_id","price","free","year","genres"]]
+        genres = pd.read_csv('Datasets/genres.csv')
         
-        #Codificar la columna géneros, indicando con 1 o 0 si el juego  contiene o no la categoría
-        for gen in generos.genre:
-            juegos_data[gen] = juegos_data.genres.apply(lambda x: 1 if gen in x else 0)
-        juegos_data.drop(columns=['genres'], inplace=True)
+        for gen in genres.genre:
+            games_data[gen] = games_data.genres.apply(lambda x: 1 if gen in x else 0)
+        games_data.drop(columns=['genres'], inplace=True)
+   
+        games_data.free = games_data.free.astype(int)
     
-        #Cambiar la columna Free a entero
-        juegos_data.free = juegos_data.free.astype(int)
+        games_data.set_index("item_id",inplace=True)
     
-        #Poner como índice el item_id
-        juegos_data.set_index("item_id",inplace=True)
-    
-        #Imputar faltantes en la columna year, cambiar a entero y escalar
-        juegos_data.year = juegos_data.year.fillna(juegos_data.year.median()).astype(int)
-        juegos_data.year = minmax_scale(juegos_data.year)
-        #Sparsity de los datos: 0.18
-    
-        #Matriz de similaridad
-        similarity_games = cosine_similarity(juegos_data)
-        similarity_games = pd.DataFrame(similarity_games, index=juegos_data.index, columns=juegos_data.index)
+        games_data.year = games_data.year.fillna(games_data.year.median()).astype(int)
+        games_data.year = minmax_scale(games_data.year)
+        
+        # Convert to sparse matrix to reduce memory usage
+        global games_data_sparse
+        games_data_sparse = sparse.csr_matrix(games_data)
     except:
         return
 
@@ -250,19 +245,14 @@ def developer_reviews_analysis(dev: str):
 """
 @app.get("/recomendacion_juego/{item_id}")
 def recomendacion_juego(item_id: int):
-    #Si la matriz de similaridad de juegos no está inicializada, hacerlo
-    if similarity_games is None:
-        init_similarity_games()
-
     try:
-        #Buscar los juegos similares
-        juegos_rec = similarity_games[item_id].sort_values(ascending=False).drop(item_id).head(5).index.to_list()
-        #Si los juegos recomendados están dentro de la información de juegos disponible, reemplazar la id por el nombre
+        # Calculate cosine similarity on the fly
+        similarity = cosine_similarity(games_data_sparse[games_data.index.get_loc(item_id)], games_data_sparse).flatten()
+        games_rec = pd.Series(similarity, index=games_data.index).sort_values(ascending=False).drop(item_id).head(5).index.to_list()
         for i in range(5):
-            if juegos_rec[i] in juegos.item_id:
-                juegos_rec[i] = juegos[juegos.item_id == item_id].app_name.values[0]
+            if games_rec[i] in games.item_id.values:
+                games_rec[i] = games.loc[games['item_id'] == games_rec[i], 'app_name'].values[0]
     
-        #Retornar
-        return juegos_rec
+        return games_rec
     except Exception as e:
-        return {"Error: ":e}
+        return {"Error: ":str(e)}
