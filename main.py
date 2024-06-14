@@ -26,7 +26,7 @@ juegos['year'] = juegos.release_date.dt.year
 juegos["free"] = juegos.price.apply(lambda x: "free to play".find(x.lower().strip()) >= 0)
 juegos["price"] = juegos.price.apply(lambda x: float(x) if patron.fullmatch(x) else 0)
 juegos["price"] = juegos.price.astype(float, errors='ignore')
-"""
+
 #Matriz de similaridad de juegos
 def init_similarity_games():
     try:
@@ -59,7 +59,7 @@ def init_similarity_games():
 
 #Crear matrices de similaridad de los juegos
 init_similarity_games()
-"""
+
 #Método de la página raíz
 @app.get("/")
 def root():
@@ -247,7 +247,7 @@ def developer_reviews_analysis(dev: str):
 """
     Recomendar 5 juegos similares al ingresado
     Input: id del juego, int
-
+"""
 @app.get("/recomendacion_juego/{item_id}")
 def recomendacion_juego(item_id: int):
     #Si la matriz de similaridad de juegos no está inicializada, hacerlo
@@ -266,4 +266,3 @@ def recomendacion_juego(item_id: int):
         return juegos_rec
     except Exception as e:
         return {"Error: ":e}
-"""
